@@ -29,10 +29,13 @@ function createBot() {
     port: SERVER_PORT,
     username: MC_USERNAME,
     auth: 'offline',
-    version: '1.21.11', // BananaSMP's server version
+    version: '1.21.4', // Java version. Try '1.21.1' if this fails.
     physicsEnabled: true,
     checkTimeoutInterval: 60000,
   });
+
+  // DEBUG: See how far the connection gets
+  bot.on('login', () => console.log('[DEBUG] Login packet sent. Waiting for spawn...'));
 
   bot.once('spawn', () => {
     console.log(`[SUCCESS] ${bot.username} spawned. Waiting ${JOIN_GRACE_PERIOD_MS}ms for anti-bot check to pass...`);
@@ -55,7 +58,12 @@ function createBot() {
     scheduleReconnect();
   });
 
-  bot.on('kicked', (reason) => console.log(`[WARN] Kicked: ${reason}`));
+  // FIXED: This now shows the actual kick message instead of [object Object]
+  bot.on('kicked', (reason, loggedIn) => {
+    const kickReason = typeof reason === 'string' ? reason : JSON.stringify(reason);
+    console.log(`[WARN] Kicked. LoggedIn: ${loggedIn}. Reason: ${kickReason}`);
+  });
+
   bot.on('error', (err) => console.error('[ERROR]', err.message || err));
 }
 
