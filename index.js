@@ -1,12 +1,12 @@
 const mineflayer = require('mineflayer');
 
-// All secrets pulled from Railway environment variables
+// All credentials pulled from Railway environment variables (never hardcoded)
 const SERVER_IP = process.env.SERVER_IP || 'bananasmp.net';
 const SERVER_PORT = parseInt(process.env.SERVER_PORT, 10) || 25565;
 const MC_USERNAME = process.env.MC_USERNAME;
 const MC_PASSWORD = process.env.MC_PASSWORD;
 
-// Sanity check so the bot fails loudly if you forget to set the vars
+// Sanity check — fails loudly if you forget to set the Railway variables
 if (!MC_USERNAME) {
   console.error('[FATAL] MC_USERNAME environment variable is not set.');
   process.exit(1);
@@ -29,7 +29,7 @@ function createBot() {
     port: SERVER_PORT,
     username: MC_USERNAME,
     auth: 'offline',
-    version: false,
+    version: '1.21.11', // BananaSMP's server version
     physicsEnabled: true,
     checkTimeoutInterval: 60000,
   });
