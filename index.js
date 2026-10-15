@@ -20,6 +20,7 @@ let afkInterval;
 let reconnectTimeout;
 let isReconnecting = false;
 let lastAction = 0;
+let authAttempted = false;
 
 function createBot() {
   console.log(`[INFO] Connecting to ${SERVER_IP}:${SERVER_PORT} as ${MC_USERNAME}...`);
@@ -29,26 +30,45 @@ function createBot() {
     port: SERVER_PORT,
     username: MC_USERNAME,
     auth: 'offline',
-    version: '1.21.4', // Java version. Try '1.21.1' if this fails.
+    version: '1.21.4',
     physicsEnabled: true,
-    checkTimeoutInterval: 60000,
+    checkTimeoutInterval: 60000, // 60s, matches the server's auth timeout
   });
 
   // DEBUG: See how far the connection gets
   bot.on('login', () => console.log('[DEBUG] Login packet sent. Waiting for spawn...'));
 
+  // NEW: Listen for the server's auth prompt and respond instantly
+  bot.on('message', (jsonMsg) => {
+    if (authAttempted || !MC_PASSWORD) return;
+    const msgText = jsonMsg.toString();
+    
+    // Match common AuthMe / login prompts
+    if (/register.*password/i.test(msgText)) {
+      console.log('[AUTH] Detected register prompt. Sending /register...');
+      bot.chat(`/register ${MC_PASSWORD} ${MC_PASSWORD}`);
+      authAttempted = true;
+    } else if (/login.*password/i.test(msgText) || /please.*login/i.test(msgText)) {
+      console.log('[AUTH] Detected login prompt. Sending /login...');
+      bot.chat(`/login ${MC_PASSWORD}`);
+      authAttempted = true;
+    }
+  });
+
   bot.once('spawn', () => {
     console.log(`[SUCCESS] ${bot.username} spawned. Waiting ${JOIN_GRACE_PERIOD_MS}ms for anti-bot check to pass...`);
 
+    // Fallback: If no prompt was detected, send /login after the grace period
     setTimeout(() => {
+      if (!authAttempted && MC_PASSWORD) {
+        console.log('[AUTH] No prompt detected. Sending /login as fallback...');
+        bot.chat(`/login ${MC_PASSWORD}`);
+        authAttempted = true;
+      }
+      
       console.log('[INFO] Grace period over. Starting anti-AFK loop.');
       isReconnecting = false;
       startHumanLikeLoop();
-
-      if (MC_PASSWORD) {
-        bot.chat(`/login ${MC_PASSWORD}`);
-        console.log('[AUTH] Sent /login');
-      }
     }, JOIN_GRACE_PERIOD_MS);
   });
 
